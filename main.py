@@ -3,6 +3,7 @@ import time
 import os
 from dotenv import load_dotenv
 import pandas as pd 
+import email
 
 load_dotenv()
 USERNAME = os.getenv("USERNAME_HISQIS")
@@ -55,10 +56,33 @@ def get_grades():
         
         return df_hisqis
 
-df_old = pd.read_csv('data.csv')
+df_old = pd.read_csv('data.csv', keep_default_na=False, dtype=str)
 df_new = get_grades()
-print(df_new.dtypes)
-#df_new.dtypes()
-#df = df[df["Prüfungsnr."].str[-2:].isin(["10", "20", "30", "40", "50", "60"])]
+df = df_new[df_new["Prüfungsnr."].str[-2:].isin(["10", "20", "30", "40", "50", "60"])][["Prüfungsnr.","Prüfungstext", "Note"]]
+df = df_old[df_old["Prüfungsnr."].str[-2:].isin(["10", "20", "30", "40", "50", "60"])][["Prüfungsnr.","Prüfungstext", "Note"]]
+df_old = df_old.set_index("Prüfungsnr.")
+df_new = df_new.set_index("Prüfungsnr.")
 
 
+def get_new_entries(old_df, new_df):
+    old_index_set = set(old_df.index)
+    new_index_set = set(new_df.index)
+    new_indices = list(new_index_set - old_index_set)
+    return new_df.loc[new_indices]
+
+message = ""
+
+if (df_old.shape == df_new.shape):
+    changes = df_new[(df_new!=df_old).sum(1)==1]
+    for index, row in changes.iterrows():
+        if row["Note"] != "":
+            message = message + "Neue Note in " + row["Prüfungstext"]+ ": "+row["Note"] + "\n"
+else:
+    new_entries = get_new_entries(df_old, df_new)
+    new_grade = new_entries.loc[:,"Note"].values
+    for index, row in new_entries.iterrows():
+        if row["Note"] != "":
+            message = message + "Neue Note in " + row["Prüfungstext"]+ ": "+row["Note"] + "\n"
+
+email.send(message)
+df_new.to_csv("data.csv")
