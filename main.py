@@ -3,7 +3,7 @@ import time
 import os
 from dotenv import load_dotenv
 import pandas as pd 
-import email
+import emailer
 
 load_dotenv()
 USERNAME = os.getenv("USERNAME_HISQIS")
@@ -56,6 +56,7 @@ def get_grades():
         
         return df_hisqis
 
+
 df_old = pd.read_csv('data.csv', keep_default_na=False, dtype=str)
 df_new = get_grades()
 df = df_new[df_new["Prüfungsnr."].str[-2:].isin(["10", "20", "30", "40", "50", "60"])][["Prüfungsnr.","Prüfungstext", "Note"]]
@@ -83,6 +84,6 @@ else:
     for index, row in new_entries.iterrows():
         if row["Note"] != "":
             message = message + "Neue Note in " + row["Prüfungstext"]+ ": "+row["Note"] + "\n"
-
-email.send(message)
-df_new.to_csv("data.csv")
+if message != "":
+    emailer.send(message)
+    df_new.to_csv("data.csv")
